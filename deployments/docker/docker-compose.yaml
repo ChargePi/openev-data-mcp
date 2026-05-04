@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openevdata
+      POSTGRES_PASSWORD: openevdata
+      POSTGRES_DB: openevdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openevdata -d openevdata"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: ../..
+      dockerfile: build/service/Dockerfile
+    restart: unless-stopped
+    environment:
+      OPENEV_MCP_DATABASE_HOST: db
+      OPENEV_MCP_DATABASE_PORT: 5432
+      OPENEV_MCP_DATABASE_USER: openevdata
+      OPENEV_MCP_DATABASE_PASSWORD: openevdata
+      OPENEV_MCP_DATABASE_DBNAME: openevdata
+      OPENEV_MCP_DATABASE_SSL_MODE: disable
+      OPENEV_MCP_REFRESH_INTERVAL: 5m
+      OPENEV_MCP_PORT: 8080
+      OPENEV_MCP_HEALTH_PORT: 9090
+    ports:
+      - "8083:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
