@@ -28,17 +28,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  # todo rename and add services if needed
   build:
-    name: "Build Service"
+    name: "Build MCP Service"
     uses: ./.github/workflows/build.yaml
     permissions:
       contents: read
       pull-requests: write
       checks: write
     with:
-      service: service
+      service: openev-data-mcp-service
       push: ${{ github.event_name != 'pull_request' }}
-      repository: service
+      repository: openev-data-mcp-service
       dockerfile: "./build/service/Dockerfile"
     secrets: inherit
