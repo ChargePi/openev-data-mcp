@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 func Connect(cfg config.DatabaseConfig, logger *zap.Logger) (*gorm.DB, error) {
@@ -16,6 +17,10 @@ func Connect(cfg config.DatabaseConfig, logger *zap.Logger) (*gorm.DB, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
+	}
+
+	if err := db.Use(tracing.NewPlugin(tracing.WithoutMetrics())); err != nil {
+		return nil, fmt.Errorf("enabling GORM tracing: %w", err)
 	}
 
 	sqlDB, err := db.DB()
