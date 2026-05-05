@@ -1,4 +1,4 @@
-package mcptracing
+package mcp
 
 import (
 	"context"
@@ -15,14 +15,14 @@ import (
 
 var tracer = otel.Tracer("mcp.server")
 
-// AddHooks registers OTel tracing hooks onto h following the MCP semantic
+// TraceHooks registers OTel tracing hooks onto h following the MCP semantic
 // conventions (https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp/).
 //
 // One span is created per MCP request. The span is opened in OnBeforeAny,
 // enriched with method-specific attributes by the typed before-hooks, and
 // closed in OnSuccess or OnError. Spans are correlated across the three hook
 // sites via the request id stored in a sync.Map.
-func AddHooks(h *mcpserver.Hooks) {
+func TraceHooks(h *mcpserver.Hooks) {
 	var spans sync.Map
 
 	h.AddBeforeAny(func(ctx context.Context, id any, method mcp.MCPMethod, _ any) {

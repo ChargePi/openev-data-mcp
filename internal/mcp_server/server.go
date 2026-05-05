@@ -1,4 +1,4 @@
-package server
+package mcp_server
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ChargePi/openev-data-mcp/pkg/mcptracing"
+	"github.com/ChargePi/openev-data-mcp/pkg/observability/mcp"
 	"github.com/ChargePi/openev-data-mcp/pkg/vehicle"
 	mcpserver "github.com/mark3labs/mcp-go/server"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -35,8 +35,9 @@ type Server struct {
 func New(svc VehicleService, cacheTTL time.Duration, logger *zap.Logger) *Server {
 	cache := newResourceCache(cacheTTL)
 
-	hooks := loggingHooks(logger)
-	mcptracing.AddHooks(hooks)
+	hooks := &mcpserver.Hooks{}
+	mcp.LoggingHooks(logger, hooks)
+	mcp.TraceHooks(hooks)
 
 	s := mcpserver.NewMCPServer(mcpName, mcpVersion,
 		mcpserver.WithRecovery(),

@@ -9,7 +9,7 @@ import (
 
 	"github.com/ChargePi/openev-data-mcp/internal/config"
 	"github.com/ChargePi/openev-data-mcp/internal/database"
-	"github.com/ChargePi/openev-data-mcp/internal/server"
+	"github.com/ChargePi/openev-data-mcp/internal/mcp_server"
 	"github.com/ChargePi/openev-data-mcp/internal/service"
 	"github.com/ChargePi/openev-data-mcp/pkg/observability"
 	"go.uber.org/zap"
@@ -72,7 +72,7 @@ func (a *App) Run(ctx context.Context, cfg *config.Config) {
 	healthSrv := a.startHealthServer(cfg.HealthPort)
 	healthSrv.SetServingStatus(serviceName, grpc_health_v1.HealthCheckResponse_SERVING)
 
-	srv := server.New(svc, cfg.RefreshInterval, logger)
+	srv := mcp_server.New(svc, cfg.RefreshInterval, logger)
 
 	go func() {
 		if err := srv.Serve(cfg.Port); err != nil {
