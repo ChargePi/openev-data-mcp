@@ -11,6 +11,7 @@ import (
 	"github.com/ChargePi/openev-data-mcp/internal/database"
 	"github.com/ChargePi/openev-data-mcp/internal/server"
 	"github.com/ChargePi/openev-data-mcp/internal/service"
+	"github.com/ChargePi/openev-data-mcp/pkg/observability"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -29,15 +30,30 @@ type App struct {
 }
 
 func New(logger *zap.Logger) *App {
-	return &App{logger: logger}
+	return &App{
+		logger: logger.With(
+			zap.String("service", serviceName),
+			zap.String("version", serviceVersion),
+		),
+	}
 }
 
 func (a *App) Run(ctx context.Context, cfg *config.Config) {
 	logger := a.logger
-	logger.Info("starting service",
-		zap.String("service", serviceName),
-		zap.String("version", serviceVersion),
-	)
+	logger.Info("starting service")
+
+	if cfg.Observability.Enabled {
+		shutdown, err := observability.Setup(ctx, serviceName, serviceVersion, cfg.Observability.OTLPEndpoint)
+		if err != nil {
+			logger.Fatal("setting up observability", zap.Error(err))
+		}
+		a.addDeferFunc(func(ctx context.Context) {
+			if err := shutdown(ctx); err != nil {
+				logger.Error("shutting down observability", zap.Error(err))
+			}
+		})
+		logger.Info("observability enabled", zap.String("otlp_endpoint", cfg.Observability.OTLPEndpoint))
+	}
 
 	db, err := database.Connect(cfg.Database, logger)
 	if err != nil {

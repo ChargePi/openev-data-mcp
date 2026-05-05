@@ -9,10 +9,16 @@ import (
 )
 
 type Config struct {
-	Database        DatabaseConfig `mapstructure:"database"`
-	RefreshInterval time.Duration  `mapstructure:"refresh_interval"`
-	HealthPort      int            `mapstructure:"health_port"`
-	Port            int            `mapstructure:"port"`
+	Database        DatabaseConfig  `mapstructure:"database"`
+	Observability   ObservabilityConfig `mapstructure:"observability"`
+	RefreshInterval time.Duration   `mapstructure:"refresh_interval"`
+	HealthPort      int             `mapstructure:"health_port"`
+	Port            int             `mapstructure:"port"`
+}
+
+type ObservabilityConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
 }
 
 type DatabaseConfig struct {
@@ -38,6 +44,8 @@ func Load(cfgFile string) (*Config, error) {
 	viper.SetDefault("database.password", "openevdata")
 	viper.SetDefault("database.dbname", "openevdata")
 	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("observability.enabled", false)
+	viper.SetDefault("observability.otlp_endpoint", "localhost:4317")
 	viper.SetDefault("refresh_interval", "5m")
 	viper.SetDefault("health_port", 9090)
 	viper.SetDefault("port", 8080)
@@ -45,6 +53,19 @@ func Load(cfgFile string) (*Config, error) {
 	viper.SetEnvPrefix("OPENEV_MCP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+
+	// AutomaticEnv does not resolve nested keys during Unmarshal; bind each explicitly.
+	_ = viper.BindEnv("database.host", "OPENEV_MCP_DATABASE_HOST")
+	_ = viper.BindEnv("database.port", "OPENEV_MCP_DATABASE_PORT")
+	_ = viper.BindEnv("database.user", "OPENEV_MCP_DATABASE_USER")
+	_ = viper.BindEnv("database.password", "OPENEV_MCP_DATABASE_PASSWORD")
+	_ = viper.BindEnv("database.dbname", "OPENEV_MCP_DATABASE_DBNAME")
+	_ = viper.BindEnv("database.ssl_mode", "OPENEV_MCP_DATABASE_SSL_MODE")
+	_ = viper.BindEnv("observability.enabled", "OPENEV_MCP_OBSERVABILITY_ENABLED")
+	_ = viper.BindEnv("observability.otlp_endpoint", "OPENEV_MCP_OBSERVABILITY_OTLP_ENDPOINT")
+	_ = viper.BindEnv("refresh_interval", "OPENEV_MCP_REFRESH_INTERVAL")
+	_ = viper.BindEnv("health_port", "OPENEV_MCP_HEALTH_PORT")
+	_ = viper.BindEnv("port", "OPENEV_MCP_PORT")
 
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
