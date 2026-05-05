@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	gormlogger "gorm.io/gorm/logger"
 	"go.uber.org/zap"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 type zapGormLogger struct {

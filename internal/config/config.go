@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	Database        DatabaseConfig  `mapstructure:"database"`
+	Database        DatabaseConfig      `mapstructure:"database"`
 	Observability   ObservabilityConfig `mapstructure:"observability"`
-	RefreshInterval time.Duration   `mapstructure:"refresh_interval"`
-	HealthPort      int             `mapstructure:"health_port"`
-	Port            int             `mapstructure:"port"`
+	RefreshInterval time.Duration       `mapstructure:"refresh_interval"`
+	HealthPort      int                 `mapstructure:"health_port"`
+	Port            int                 `mapstructure:"port"`
 }
 
 type ObservabilityConfig struct {
