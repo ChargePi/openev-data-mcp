@@ -20,7 +20,7 @@ services:
   app:
     build:
       context: ../..
-      dockerfile: build/service/Dockerfile
+      dockerfile: ../../build/Dockerfile
     restart: unless-stopped
     environment:
       OPENEV_MCP_DATABASE_HOST: db
