@@ -1,0 +1,53 @@
+# GoReleaser configuration file
+version: 2
+
+# General settings
+project_name: openev-data-mcp
+builds:
+  - id: bin
+    main: ./cmd/app
+    binary: openev-data-mcp
+    goos:
+      - freebsd
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: freebsd
+        goarch: arm
+
+archives:
+  - id: bin-archive
+    formats:
+      - tar.gz
+    files:
+      - LICENSE.md
+      - README.md
+
+dockers_v2:
+  - images:
+      - "ghcr.io/chargepi/openev-data-mcp"
+    tags:
+      - "{{ .Tag }}"
+      - "latest"
+    dockerfile: Dockerfile.release
+    platforms:
+      - linux/amd64
+      - linux/arm64
+
+release:
+  github:
+    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    name: openev-data-mcp
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '.*\.md$'
