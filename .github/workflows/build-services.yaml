@@ -39,5 +39,5 @@ jobs:
       service: openev-data-mcp-service
       push: ${{ github.event_name != 'pull_request' }}
       repository: openev-data-mcp-service
-      dockerfile: "./build/service/Dockerfile"
+      dockerfile: "./build/Dockerfile"
     secrets: inherit
