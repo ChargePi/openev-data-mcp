@@ -1,0 +1,42 @@
+{{- /* Text embedded into the ev_vehicles Qdrant collection for semantic search. */ -}}
+Make: {{.Make}}
+Model: {{.Model}}
+Year: {{.Year}}
+Trim: {{.Trim}}
+{{- with .Variant}}
+Variant: {{.}}
+{{- end}}
+Vehicle type: {{.VehicleType}}
+{{- with .Drivetrain}}
+Drivetrain: {{.}}
+{{- end}}
+{{- with .PowerKW}}
+Power: {{.}} kW
+{{- end}}
+{{- with .Battery.GrossKWh}}
+Battery gross capacity: {{.}} kWh
+{{- end}}
+{{- with .Battery.NetKWh}}
+Battery net capacity: {{.}} kWh
+{{- end}}
+{{- with .Battery.Chemistry}}
+Battery chemistry: {{.}}
+{{- end}}
+{{- with .Battery.ThermalManagement}}
+Battery thermal management: {{.}}
+{{- end}}
+{{- with .Battery.HeatPump}}
+Heat pump: {{.}}
+{{- end}}
+{{- with .ACPowerKW}}
+AC charging power: {{.}} kW
+{{- end}}
+{{- with .DCPowerKW}}
+DC charging power: {{.}} kW
+{{- end}}
+{{- with .Ranges}}
+Range: {{range $i, $r := .}}{{if $i}}, {{end}}{{$r.Cycle}} {{$r.Km}} km{{end}}
+{{- end}}
+{{- with .ChargePorts}}
+Charging ports: {{range $i, $p := .}}{{if $i}}, {{end}}{{$p.Kind}} {{$p.Connector}}{{end}}
+{{- end}}

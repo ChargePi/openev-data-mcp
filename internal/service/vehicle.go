@@ -15,7 +15,7 @@ var tracer = otel.Tracer("vehicle.service")
 // Repository is the data-access interface the service depends on.
 type Repository interface {
 	ListVehicles(ctx context.Context) ([]vehicle.Vehicle, error)
-	GetVehicle(ctx context.Context, id int) (*vehicle.Vehicle, error)
+	GetVehicle(ctx context.Context, uniqueCode string) (*vehicle.Vehicle, error)
 	ListMakes(ctx context.Context) ([]vehicle.NamedEntity, error)
 	GetVehiclesByMake(ctx context.Context, makeSlug string) ([]vehicle.Vehicle, error)
 }
@@ -46,17 +46,17 @@ func (s *VehicleService) ListVehicles(ctx context.Context) ([]vehicle.Vehicle, e
 	return vehicles, nil
 }
 
-func (s *VehicleService) GetVehicle(ctx context.Context, id int) (*vehicle.Vehicle, error) {
+func (s *VehicleService) GetVehicle(ctx context.Context, uniqueCode string) (*vehicle.Vehicle, error) {
 	ctx, span := tracer.Start(ctx, "GetVehicle")
 	defer span.End()
 
-	span.SetAttributes(attribute.Int("vehicle.id", id))
-	s.logger.Debug("getting vehicle", zap.Int("id", id))
-	v, err := s.repo.GetVehicle(ctx, id)
+	span.SetAttributes(attribute.String("vehicle.unique_code", uniqueCode))
+	s.logger.Debug("getting vehicle", zap.String("unique_code", uniqueCode))
+	v, err := s.repo.GetVehicle(ctx, uniqueCode)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		s.logger.Error("failed to get vehicle", zap.Int("id", id), zap.Error(err))
+		s.logger.Error("failed to get vehicle", zap.String("unique_code", uniqueCode), zap.Error(err))
 		return nil, err
 	}
 	return v, nil

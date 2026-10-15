@@ -19,45 +19,36 @@ func NewRepository(db *gorm.DB) *Repository {
 func (r *Repository) ListVehicles(ctx context.Context) ([]vehicle.Vehicle, error) {
 	var models []VehicleModel
 	result := r.db.WithContext(ctx).
-		Preload("ChargePorts").
-		Preload("RangeRatings").
-		Preload("Sources").
 		Order("make_slug, model_slug, year, trim_slug").
 		Find(&models)
 	if result.Error != nil {
 		return nil, fmt.Errorf("querying vehicles: %w", result.Error)
 	}
 
-	vehicles := make([]vehicle.Vehicle, len(models))
-	for i, m := range models {
-		vehicles[i] = m.ToDomain()
-	}
-	return vehicles, nil
+	return toDomain(models)
 }
 
-func (r *Repository) GetVehicle(ctx context.Context, id int) (*vehicle.Vehicle, error) {
+func (r *Repository) GetVehicle(ctx context.Context, uniqueCode string) (*vehicle.Vehicle, error) {
 	var m VehicleModel
 	result := r.db.WithContext(ctx).
-		Preload("ChargePorts").
-		Preload("RangeRatings").
-		Preload("Sources").
-		First(&m, id)
+		Where("unique_code = ?", uniqueCode).
+		First(&m)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("querying vehicle %d: %w", id, result.Error)
+		return nil, fmt.Errorf("querying vehicle %q: %w", uniqueCode, result.Error)
 	}
 
-	v := m.ToDomain()
+	v, err := m.ToDomain()
+	if err != nil {
+		return nil, err
+	}
 	return &v, nil
 }
 
 func (r *Repository) ListMakes(ctx context.Context) ([]vehicle.NamedEntity, error) {
-	var rows []struct {
-		MakeSlug string
-		MakeName string
-	}
+	var rows []makeRow
 	result := r.db.WithContext(ctx).
 		Model(&VehicleModel{}).
 		Select("DISTINCT make_slug, make_name").
@@ -77,9 +68,6 @@ func (r *Repository) ListMakes(ctx context.Context) ([]vehicle.NamedEntity, erro
 func (r *Repository) GetVehiclesByMake(ctx context.Context, makeSlug string) ([]vehicle.Vehicle, error) {
 	var models []VehicleModel
 	result := r.db.WithContext(ctx).
-		Preload("ChargePorts").
-		Preload("RangeRatings").
-		Preload("Sources").
 		Where("make_slug = ?", makeSlug).
 		Order("model_slug, year, trim_slug").
 		Find(&models)
@@ -87,9 +75,29 @@ func (r *Repository) GetVehiclesByMake(ctx context.Context, makeSlug string) ([]
 		return nil, fmt.Errorf("querying vehicles by make %q: %w", makeSlug, result.Error)
 	}
 
+	return toDomain(models)
+}
+
+func (r *Repository) GetVehiclesByUniqueCodes(ctx context.Context, codes []string) ([]vehicle.Vehicle, error) {
+	var models []VehicleModel
+	result := r.db.WithContext(ctx).
+		Where("unique_code IN ?", codes).
+		Find(&models)
+	if result.Error != nil {
+		return nil, fmt.Errorf("querying vehicles by unique codes: %w", result.Error)
+	}
+
+	return toDomain(models)
+}
+
+func toDomain(models []VehicleModel) ([]vehicle.Vehicle, error) {
 	vehicles := make([]vehicle.Vehicle, len(models))
 	for i, m := range models {
-		vehicles[i] = m.ToDomain()
+		v, err := m.ToDomain()
+		if err != nil {
+			return nil, err
+		}
+		vehicles[i] = v
 	}
 	return vehicles, nil
 }
