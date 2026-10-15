@@ -1,3 +1,9 @@
+FROM alpine:3.21 AS health-probe
+ARG TARGETARCH
+RUN wget -qO /grpc_health_probe \
+    https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.28/grpc_health_probe-linux-${TARGETARCH} \
+    && chmod +x /grpc_health_probe
+
 FROM alpine:3.21
 
 ARG TARGETPLATFORM
@@ -8,5 +14,6 @@ USER $user
 
 WORKDIR /usr/local/bin
 COPY --chown=$user:$group $TARGETPLATFORM/openev-data-mcp /usr/local/bin/openev-data-mcp
+COPY --from=health-probe /grpc_health_probe /usr/local/bin/grpc_health_probe
 
 CMD ["/usr/local/bin/openev-data-mcp"]

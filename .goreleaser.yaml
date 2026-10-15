@@ -7,6 +7,8 @@ builds:
   - id: bin
     main: ./cmd/app
     binary: openev-data-mcp
+    env:
+      - CGO_ENABLED=0
     goos:
       - freebsd
       - windows
