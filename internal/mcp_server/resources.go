@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"net/url"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -31,9 +31,11 @@ func (s *Server) registerResources() {
 	)
 
 	s.mcp.AddResourceTemplate(
-		mcp.NewResourceTemplate("evdata://vehicles/{id}",
+		// Reserved expansion ({+...}) so the colons in unique codes match unencoded.
+		mcp.NewResourceTemplate("evdata://vehicles/{+unique_code}",
 			"EV Vehicle Details",
-			mcp.WithTemplateDescription("Full details for a specific electric vehicle by numeric ID"),
+			mcp.WithTemplateDescription("Full details for a specific electric vehicle by its unique code "+
+				"('make:model:year:trim' slugs, e.g. 'audi:q6_e_tron:2025:q6_e_tron')"),
 			mcp.WithTemplateMIMEType("application/json"),
 		),
 		s.handleVehicleDetail,
@@ -62,11 +64,11 @@ func (s *Server) handleVehiclesList(ctx context.Context, req mcp.ReadResourceReq
 	for _, v := range vehicles {
 		data, err := json.Marshal(v)
 		if err != nil {
-			s.logger.Error("failed to marshal vehicle", zap.Int("id", v.ID), zap.Error(err))
-			return nil, fmt.Errorf("marshaling vehicle %d: %w", v.ID, err)
+			s.logger.Error("failed to marshal vehicle", zap.String("unique_code", v.UniqueCode), zap.Error(err))
+			return nil, fmt.Errorf("marshaling vehicle %q: %w", v.UniqueCode, err)
 		}
 		contents = append(contents, mcp.TextResourceContents{
-			URI:      fmt.Sprintf("evdata://vehicles/%d", v.ID),
+			URI:      "evdata://vehicles/" + v.UniqueCode,
 			MIMEType: "application/json",
 			Text:     string(data),
 		})
@@ -107,29 +109,30 @@ func (s *Server) handleVehicleDetail(ctx context.Context, req mcp.ReadResourceRe
 	s.logger.Info("resource read", zap.String("uri", req.Params.URI))
 
 	raw := strings.TrimPrefix(req.Params.URI, "evdata://vehicles/")
-	id, err := strconv.Atoi(raw)
+	// Clients may percent-encode the colons in the unique code.
+	code, err := url.PathUnescape(raw)
 	if err != nil {
-		s.logger.Warn("invalid vehicle ID", zap.String("raw", raw), zap.Error(err))
-		return nil, fmt.Errorf("invalid vehicle ID %q: %w", raw, err)
+		s.logger.Warn("invalid vehicle unique code", zap.String("raw", raw), zap.Error(err))
+		return nil, fmt.Errorf("invalid vehicle unique code %q: %w", raw, err)
 	}
 
-	v, err := s.svc.GetVehicle(ctx, id)
+	v, err := s.svc.GetVehicle(ctx, code)
 	if err != nil {
-		s.logger.Error("failed to get vehicle", zap.Int("id", id), zap.Error(err))
-		return nil, fmt.Errorf("getting vehicle %d: %w", id, err)
+		s.logger.Error("failed to get vehicle", zap.String("unique_code", code), zap.Error(err))
+		return nil, fmt.Errorf("getting vehicle %q: %w", code, err)
 	}
 	if v == nil {
-		s.logger.Warn("vehicle not found", zap.Int("id", id))
-		return nil, fmt.Errorf("vehicle %d not found", id)
+		s.logger.Warn("vehicle not found", zap.String("unique_code", code))
+		return nil, fmt.Errorf("vehicle %q not found", code)
 	}
 
 	data, err := json.Marshal(v)
 	if err != nil {
-		s.logger.Error("failed to marshal vehicle", zap.Int("id", id), zap.Error(err))
+		s.logger.Error("failed to marshal vehicle", zap.String("unique_code", code), zap.Error(err))
 		return nil, fmt.Errorf("marshaling vehicle: %w", err)
 	}
 
-	s.logger.Debug("vehicle detail served", zap.Int("id", id))
+	s.logger.Debug("vehicle detail served", zap.String("unique_code", code))
 	return []mcp.ResourceContents{
 		mcp.TextResourceContents{
 			URI:      req.Params.URI,
@@ -154,11 +157,11 @@ func (s *Server) handleVehiclesByMake(ctx context.Context, req mcp.ReadResourceR
 	for _, v := range vehicles {
 		data, err := json.Marshal(v)
 		if err != nil {
-			s.logger.Error("failed to marshal vehicle", zap.Int("id", v.ID), zap.Error(err))
-			return nil, fmt.Errorf("marshaling vehicle %d: %w", v.ID, err)
+			s.logger.Error("failed to marshal vehicle", zap.String("unique_code", v.UniqueCode), zap.Error(err))
+			return nil, fmt.Errorf("marshaling vehicle %q: %w", v.UniqueCode, err)
 		}
 		contents = append(contents, mcp.TextResourceContents{
-			URI:      fmt.Sprintf("evdata://vehicles/%d", v.ID),
+			URI:      "evdata://vehicles/" + v.UniqueCode,
 			MIMEType: "application/json",
 			Text:     string(data),
 		})

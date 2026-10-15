@@ -1,0 +1,94 @@
+{
+  "$schema": "../../../../schema.json",
+  "schema_version": "1.0.0",
+  "unique_code": "acme:volt_one:2025:long_range",
+  "make": {"slug": "acme", "name": "Acme"},
+  "model": {"slug": "volt_one", "name": "Volt One"},
+  "year": 2025,
+  "trim": {"slug": "long_range", "name": "Long Range"},
+  "variant": {"slug": "sportback", "name": "Sportback", "kind": "body_style", "notes": "Fastback roof"},
+  "markets": ["DE", "US"],
+  "availability": {"status": "production", "start_year": 2025, "end_year": 2027, "notes": "Limited run"},
+  "vehicle_type": "suv",
+  "body": {"style": "crossover", "doors": 5, "seats": 5, "rows": 2, "platform": "PPE", "drag_coefficient_cd": 0.25},
+  "dimensions": {"length_mm": 4771, "width_mm": 1993, "width_with_mirrors_mm": 2100, "height_mm": 1648,
+    "wheelbase_mm": 2899, "ground_clearance_mm": 180, "turning_circle_m": 11.8},
+  "weights": {"curb_weight_kg": 2350, "gross_vehicle_weight_kg": 2900, "max_payload_kg": 550, "roof_load_kg": 75},
+  "capacity": {"cargo_l": 526, "cargo_max_l": 1529, "frunk_l": 64, "towing_braked_kg": 2400,
+    "towing_unbraked_kg": 750, "towing_vertical_load_kg": 100},
+  "powertrain": {
+    "drivetrain": "awd", "system_power_kw": 285, "system_torque_nm": 580,
+    "motors": [
+      {"position": "front", "type": "asm", "power_kw": 140, "torque_nm": 275, "cooling": "liquid"},
+      {"position": "rear", "type": "pmsm", "power_kw": 210, "torque_nm": 580}
+    ],
+    "transmission": {"gears": 1, "type": "single_speed"}
+  },
+  "battery": {
+    "manufacturer": "CATL", "chemistry": "nmc", "cathode_material": "NMC811",
+    "pack_capacity_kwh_gross": 100, "pack_capacity_kwh_net": 94.9,
+    "pack_voltage_nominal_v": 800, "pack_voltage_max_v": 870, "pack_voltage_min_v": 600,
+    "cell_count": 180, "module_count": 12, "thermal_management": "liquid", "heat_pump": true,
+    "preconditioning": {"supported": true, "modes": ["auto", "manual"], "notes": "Via navigation"},
+    "warranty": {"years": 8, "distance_km": 160000, "capacity_retention_percent": 70},
+    "usable_soc_window_percent": {"min_percent": 3, "max_percent": 98, "notes": "Estimated"}
+  },
+  "charge_ports": [
+    {"kind": "combo", "connector": "ccs2", "location": {"side": "right", "position": "rear", "notes": "Behind flap"},
+      "covers": "flap", "light": true, "motorized": true, "notes": "Main port"},
+    {"kind": "ac_only", "connector": "type2"}
+  ],
+  "charging": {
+    "ac": {"max_power_kw": 11, "supported_power_steps_kw": [3.7, 7.4, 11], "phases": 3,
+      "voltage_range_v": {"min_v": 200, "max_v": 480}, "frequency_hz": 50, "max_current_a": 16,
+      "onboard_charger_count": 1, "notes": "22 kW optional"},
+    "dc": {"max_power_kw": 270, "voltage_range_v": {"min_v": 400, "max_v": 920}, "max_current_a": 400,
+      "architecture_voltage_class": "800v",
+      "power_limits_by_voltage": [{"voltage_class": "400v", "max_power_kw": 135, "notes": "Bank charging"}],
+      "notes": "Peak at 10%"},
+    "protocols": {"ac": ["iec_61851"], "dc": ["din_70121", "iso_15118_2"], "plug_and_charge": true,
+      "notes": "PnC needs activation"},
+    "dc_charge_curve": {
+      "curve_type": "power_by_soc",
+      "points": [{"soc_percent": 10, "power_kw": 270, "current_a": 350, "voltage_v": 770}, {"soc_percent": 80}],
+      "conditions": {"battery_temp_c": 30, "ambient_temp_c": 20, "preconditioning": true,
+        "charger_power_kw": 350, "notes": "Ideal"},
+      "source_url": "https://example.com/curve",
+      "notes": "Measured"
+    },
+    "charging_time": {
+      "ac": [{"power_kw": 11, "from_soc_percent": 0, "to_soc_percent": 100, "time_min": 570,
+        "conditions": {"ambient_temp_c": 20}, "notes": "Home wallbox"}],
+      "dc": [{"charger_power_kw": 350, "from_soc_percent": 10, "to_soc_percent": 80, "time_min": 21,
+        "conditions": {"preconditioning": true}, "notes": "OEM claim"}]
+    }
+  },
+  "v2x": {
+    "v2l": {"supported": true, "max_power_kw": 3.6,
+      "outlets": [{"kind": "socket_type_f", "count": 1, "location": "cabin", "notes": "Rear seat"}],
+      "notes": "Adapter sold separately"},
+    "v2h": {"supported": true, "max_power_kw": 11, "connector": "ccs2", "protocols": ["iso_15118_20"], "notes": "Pilot"},
+    "v2g": {"supported": false}
+  },
+  "range": {
+    "rated": [{"cycle": "wltp", "range_km": 625, "notes": "19 inch wheels"}, {"cycle": "epa", "range_km": 500}],
+    "real_world": [{"profile": "highway", "range_km": 420, "conditions": {"weather": "mild", "speed_kmh": 120},
+      "notes": "Test drive"}]
+  },
+  "efficiency": {"energy_consumption_wh_per_km": 171, "mpge": 105, "notes": "WLTP combined"},
+  "performance": {"acceleration_0_100_kmh_s": 5.9, "acceleration_0_60_mph_s": 5.5, "top_speed_kmh": 200,
+    "quarter_mile_s": 13.9},
+  "wheels_tires": {"standard_wheel_size_in": 19, "optional_wheel_sizes_in": [20, 21],
+    "tire_sizes": ["235/60 R19"], "recommended_pressure_kpa": {"front_kpa": 250, "rear_kpa": 270},
+    "notes": "Winter set available"},
+  "pricing": {"msrp": [{"currency": "EUR", "amount": 75000, "country": "DE", "year": 2025, "notes": "Base price"}]},
+  "software": {"os": "AcmeOS", "ota_supported": true, "notes": "Android based"},
+  "links": {"manufacturer_url": "https://example.com", "press_kit_url": "https://example.com/press",
+    "spec_sheet_url": "https://example.com/spec", "configurator_url": "https://example.com/build"},
+  "images": {"exterior_url": "https://example.com/ext.jpg", "interior_url": "https://example.com/int.jpg",
+    "charging_curve_plot_url": "https://example.com/curve.png"},
+  "sources": [{"type": "oem", "title": "Spec sheet", "publisher": "Acme", "url": "https://example.com/spec",
+    "accessed_at": "2025-01-15T00:00:00Z", "license": "CC-BY-4.0", "notes": "Official"}],
+  "metadata": {"created_at": "2025-01-15T00:00:00Z", "updated_at": "2025-02-01T12:30:00Z",
+    "contributors": ["alice"], "data_quality": "verified", "internal_notes": "Reviewed"}
+}

@@ -1,3 +1,5 @@
+name: openev-data-mcp
+
 services:
   db:
     image: postgres:17-alpine
@@ -7,7 +9,7 @@ services:
       POSTGRES_PASSWORD: openevdata
       POSTGRES_DB: openevdata
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../../migrations:/docker-entrypoint-initdb.d:ro
@@ -17,26 +19,65 @@ services:
       timeout: 3s
       retries: 10
 
-  app:
-    build:
-      context: ../..
-      dockerfile: ../../build/Dockerfile
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
     restart: unless-stopped
-    environment:
+    ports:
+      - "6336:6333"
+      - "6337:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Syncs the ev_vehicles Qdrant collection with Postgres, then exits. The first run embeds every vehicle and can take
+  # several minutes on the Gemini free tier; later runs only embed new or changed vehicles.
+  migrate:
+    build: &app-build
+      context: ../..
+      dockerfile: ./build/Dockerfile
+    command: ["/usr/local/bin/openev-data-mcp", "migrate"]
+    restart: "no"
+    healthcheck:
+      disable: true
+    environment: &app-env
       OPENEV_MCP_DATABASE_HOST: db
       OPENEV_MCP_DATABASE_PORT: 5432
       OPENEV_MCP_DATABASE_USER: openevdata
       OPENEV_MCP_DATABASE_PASSWORD: openevdata
       OPENEV_MCP_DATABASE_DBNAME: openevdata
       OPENEV_MCP_DATABASE_SSL_MODE: disable
+      OPENEV_MCP_QDRANT_HOST: qdrant
+      OPENEV_MCP_QDRANT_PORT: 6334
+      OPENEV_MCP_QDRANT_COLLECTION: ev_vehicles
+      OPENEV_MCP_EMBEDDING_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY must be set}
+      OPENEV_MCP_EMBEDDING_MODEL: gemini-embedding-001
+      OPENEV_MCP_EMBEDDING_DIMENSIONS: 768
       OPENEV_MCP_REFRESH_INTERVAL: 5m
       OPENEV_MCP_PORT: 8080
       OPENEV_MCP_HEALTH_PORT: 9090
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+
+  # Does not wait for migrate: search works on whatever is already indexed while a sync is running.
+  app:
+    build: *app-build
+    restart: unless-stopped
+    environment: *app-env
     ports:
       - "8083:8080"
     depends_on:
       db:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  qdrant_data:

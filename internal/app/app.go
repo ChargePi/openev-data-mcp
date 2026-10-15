@@ -9,8 +9,10 @@ import (
 
 	"github.com/ChargePi/openev-data-mcp/internal/config"
 	"github.com/ChargePi/openev-data-mcp/internal/database"
+	"github.com/ChargePi/openev-data-mcp/internal/embedding"
 	"github.com/ChargePi/openev-data-mcp/internal/mcp_server"
 	"github.com/ChargePi/openev-data-mcp/internal/service"
+	"github.com/ChargePi/openev-data-mcp/internal/vectorstore"
 	"github.com/ChargePi/openev-data-mcp/pkg/observability"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -42,37 +44,18 @@ func (a *App) Run(ctx context.Context, cfg *config.Config) {
 	logger := a.logger
 	logger.Info("starting service")
 
-	if cfg.Observability.Enabled {
-		shutdown, err := observability.Setup(ctx, serviceName, serviceVersion, cfg.Observability.OTLPEndpoint)
-		if err != nil {
-			logger.Fatal("setting up observability", zap.Error(err))
-		}
-		a.addDeferFunc(func(ctx context.Context) {
-			if err := shutdown(ctx); err != nil {
-				logger.Error("shutting down observability", zap.Error(err))
-			}
-		})
-		logger.Info("observability enabled", zap.String("otlp_endpoint", cfg.Observability.OTLPEndpoint))
-	}
-
-	db, err := database.Connect(cfg.Database, logger)
-	if err != nil {
-		logger.Fatal("connecting to database", zap.Error(err))
-	}
-	a.addDeferFunc(func(_ context.Context) {
-		sqlDB, err := db.DB()
-		if err == nil {
-			_ = sqlDB.Close()
-		}
-	})
-
-	repo := database.NewRepository(db)
+	a.setupObservability(ctx, cfg)
+	repo := a.connectDatabase(cfg)
 	svc := service.NewVehicleService(repo, logger)
+	searchSvc := a.newSearchService(ctx, cfg, repo)
 
 	healthSrv := a.startHealthServer(cfg.HealthPort)
 	healthSrv.SetServingStatus(serviceName, grpc_health_v1.HealthCheckResponse_SERVING)
 
-	srv := mcp_server.New(svc, cfg.RefreshInterval, logger)
+	srv, err := mcp_server.New(svc, searchSvc, cfg.RefreshInterval, logger)
+	if err != nil {
+		logger.Fatal("creating MCP server", zap.Error(err))
+	}
 
 	go func() {
 		if err := srv.Serve(cfg.Port); err != nil {
@@ -83,6 +66,63 @@ func (a *App) Run(ctx context.Context, cfg *config.Config) {
 	<-ctx.Done()
 	healthSrv.SetServingStatus(serviceName, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 	logger.Info("context cancelled, shutting down")
+}
+
+func (a *App) setupObservability(ctx context.Context, cfg *config.Config) {
+	logger := a.logger
+	if !cfg.Observability.Enabled {
+		return
+	}
+
+	shutdown, err := observability.Setup(ctx, serviceName, serviceVersion, cfg.Observability.OTLPEndpoint)
+	if err != nil {
+		logger.Fatal("setting up observability", zap.Error(err))
+	}
+	a.addDeferFunc(func(ctx context.Context) {
+		if err := shutdown(ctx); err != nil {
+			logger.Error("shutting down observability", zap.Error(err))
+		}
+	})
+	logger.Info("observability enabled", zap.String("otlp_endpoint", cfg.Observability.OTLPEndpoint))
+}
+
+func (a *App) connectDatabase(cfg *config.Config) *database.Repository {
+	db, err := database.Connect(cfg.Database, a.logger)
+	if err != nil {
+		a.logger.Fatal("connecting to database", zap.Error(err))
+	}
+	a.addDeferFunc(func(_ context.Context) {
+		sqlDB, err := db.DB()
+		if err == nil {
+			_ = sqlDB.Close()
+		}
+	})
+
+	return database.NewRepository(db)
+}
+
+func (a *App) newSearchService(ctx context.Context, cfg *config.Config, repo *database.Repository) *service.SearchService {
+	logger := a.logger
+
+	store, err := vectorstore.Connect(cfg.Qdrant)
+	if err != nil {
+		logger.Fatal("connecting to qdrant", zap.Error(err))
+	}
+	a.addDeferFunc(func(_ context.Context) {
+		_ = store.Close()
+	})
+
+	embedder, err := embedding.NewGeminiEmbedder(ctx, cfg.Embedding, logger)
+	if err != nil {
+		logger.Fatal("creating embedder", zap.Error(err))
+	}
+
+	return service.NewSearchService(repo, embedder, store, service.SearchConfig{
+		Dimensions:  cfg.Embedding.Dimensions,
+		BatchSize:   cfg.Embedding.BatchSize,
+		SearchLimit: cfg.Qdrant.SearchLimit,
+		MinScore:    cfg.Qdrant.MinScore,
+	}, logger)
 }
 
 func (a *App) startHealthServer(port int) *health.Server {
